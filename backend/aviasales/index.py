@@ -32,21 +32,80 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         if action == 'cities':
             # Return popular cities with IATA codes
             cities_data = [
+                # Россия
                 {'code': 'MOW', 'name': 'Москва', 'country': 'Россия'},
                 {'code': 'LED', 'name': 'Санкт-Петербург', 'country': 'Россия'},
                 {'code': 'SVO', 'name': 'Москва (Шереметьево)', 'country': 'Россия'},
+                {'code': 'KZN', 'name': 'Казань', 'country': 'Россия'},
+                {'code': 'ROV', 'name': 'Ростов-на-Дону', 'country': 'Россия'},
+                {'code': 'KRR', 'name': 'Краснодар', 'country': 'Россия'},
+                {'code': 'UFA', 'name': 'Уфа', 'country': 'Россия'},
+                {'code': 'VVO', 'name': 'Владивосток', 'country': 'Россия'},
+                
+                # Европа
                 {'code': 'PAR', 'name': 'Париж', 'country': 'Франция'},
-                {'code': 'NYC', 'name': 'Нью-Йорк', 'country': 'США'},
                 {'code': 'LON', 'name': 'Лондон', 'country': 'Великобритания'},
-                {'code': 'DXB', 'name': 'Дубай', 'country': 'ОАЭ'},
-                {'code': 'IST', 'name': 'Стамбул', 'country': 'Турция'},
                 {'code': 'BCN', 'name': 'Барселона', 'country': 'Испания'},
-                {'code': 'TYO', 'name': 'Токио', 'country': 'Япония'},
-                {'code': 'BKK', 'name': 'Бангкок', 'country': 'Таиланд'},
+                {'code': 'MAD', 'name': 'Мадрид', 'country': 'Испания'},
+                {'code': 'ROM', 'name': 'Рим', 'country': 'Италия'},
+                {'code': 'MIL', 'name': 'Милан', 'country': 'Италия'},
+                {'code': 'BER', 'name': 'Берлин', 'country': 'Германия'},
+                {'code': 'MUC', 'name': 'Мюнхен', 'country': 'Германия'},
                 {'code': 'AMS', 'name': 'Амстердам', 'country': 'Нидерланды'},
                 {'code': 'PRG', 'name': 'Прага', 'country': 'Чехия'},
-                {'code': 'ROM', 'name': 'Рим', 'country': 'Италия'},
-                {'code': 'BER', 'name': 'Берлин', 'country': 'Германия'}
+                {'code': 'VIE', 'name': 'Вена', 'country': 'Австрия'},
+                {'code': 'ZUR', 'name': 'Цюрих', 'country': 'Швейцария'},
+                {'code': 'HEL', 'name': 'Хельсинки', 'country': 'Финляндия'},
+                {'code': 'CPH', 'name': 'Копенгаген', 'country': 'Дания'},
+                {'code': 'STO', 'name': 'Стокгольм', 'country': 'Швеция'},
+                {'code': 'OSL', 'name': 'Осло', 'country': 'Норвегия'},
+                {'code': 'WAR', 'name': 'Варшава', 'country': 'Польша'},
+                {'code': 'ATH', 'name': 'Афины', 'country': 'Греция'},
+                {'code': 'LIS', 'name': 'Лиссабон', 'country': 'Португалия'},
+                
+                # Азия
+                {'code': 'IST', 'name': 'Стамбул', 'country': 'Турция'},
+                {'code': 'AYT', 'name': 'Анталья', 'country': 'Турция'},
+                {'code': 'DXB', 'name': 'Дубай', 'country': 'ОАЭ'},
+                {'code': 'DOH', 'name': 'Доха', 'country': 'Катар'},
+                {'code': 'TYO', 'name': 'Токио', 'country': 'Япония'},
+                {'code': 'SEL', 'name': 'Сеул', 'country': 'Южная Корея'},
+                {'code': 'BKK', 'name': 'Бангкок', 'country': 'Таиланд'},
+                {'code': 'KUL', 'name': 'Куала-Лумпур', 'country': 'Малайзия'},
+                {'code': 'SIN', 'name': 'Сингапур', 'country': 'Сингапур'},
+                {'code': 'HKG', 'name': 'Гонконг', 'country': 'Гонконг'},
+                {'code': 'PEK', 'name': 'Пекин', 'country': 'Китай'},
+                {'code': 'SHA', 'name': 'Шанхай', 'country': 'Китай'},
+                {'code': 'DEL', 'name': 'Дели', 'country': 'Индия'},
+                {'code': 'BOM', 'name': 'Мумбаи', 'country': 'Индия'},
+                {'code': 'TAS', 'name': 'Ташкент', 'country': 'Узбекистан'},
+                {'code': 'ALA', 'name': 'Алматы', 'country': 'Казахстан'},
+                {'code': 'NUR', 'name': 'Нур-Султан', 'country': 'Казахстан'},
+                {'code': 'EVN', 'name': 'Ереван', 'country': 'Армения'},
+                {'code': 'TBS', 'name': 'Тбилиси', 'country': 'Грузия'},
+                {'code': 'BAK', 'name': 'Баку', 'country': 'Азербайджан'},
+                
+                # Америка
+                {'code': 'NYC', 'name': 'Нью-Йорк', 'country': 'США'},
+                {'code': 'LAX', 'name': 'Лос-Анджелес', 'country': 'США'},
+                {'code': 'MIA', 'name': 'Майами', 'country': 'США'},
+                {'code': 'CHI', 'name': 'Чикаго', 'country': 'США'},
+                {'code': 'SFO', 'name': 'Сан-Франциско', 'country': 'США'},
+                {'code': 'YTO', 'name': 'Торонто', 'country': 'Канада'},
+                {'code': 'YVR', 'name': 'Ванкувер', 'country': 'Канада'},
+                {'code': 'MEX', 'name': 'Мехико', 'country': 'Мексика'},
+                {'code': 'SAO', 'name': 'Сан-Паулу', 'country': 'Бразилия'},
+                {'code': 'BUE', 'name': 'Буэнос-Айрес', 'country': 'Аргентина'},
+                
+                # Африка и Океания
+                {'code': 'CAI', 'name': 'Каир', 'country': 'Египет'},
+                {'code': 'HRG', 'name': 'Хургада', 'country': 'Египет'},
+                {'code': 'SSH', 'name': 'Шарм-эш-Шейх', 'country': 'Египет'},
+                {'code': 'CMN', 'name': 'Касабланка', 'country': 'Марокко'},
+                {'code': 'JNB', 'name': 'Йоханнесбург', 'country': 'ЮАР'},
+                {'code': 'SYD', 'name': 'Сидней', 'country': 'Австралия'},
+                {'code': 'MEL', 'name': 'Мельбурн', 'country': 'Австралия'},
+                {'code': 'AKL', 'name': 'Окленд', 'country': 'Новая Зеландия'}
             ]
             
             query = params.get('q', '').lower()
