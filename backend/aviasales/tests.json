@@ -1,0 +1,35 @@
+{
+  "tests": [
+    {
+      "name": "Get cities list",
+      "method": "GET",
+      "path": "/?action=cities",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "cities": []
+      },
+      "bodyMatcher": "type"
+    },
+    {
+      "name": "Search cities with query",
+      "method": "GET", 
+      "path": "/?action=cities&q=москва",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "cities": []
+      },
+      "bodyMatcher": "type"
+    },
+    {
+      "name": "Search flights",
+      "method": "GET",
+      "path": "/?action=search&origin=MOW&destination=PAR&depart_date=2024-12-15",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "flights": [],
+        "search_params": {}
+      },
+      "bodyMatcher": "type"
+    }
+  ]
+}

@@ -1,15 +1,119 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { Autocomplete } from "@/components/ui/autocomplete";
 import Icon from '@/components/ui/icon';
+
+interface City {
+  code: string;
+  name: string;
+  country: string;
+}
+
+interface Flight {
+  id: string;
+  airline: string;
+  origin: string;
+  destination: string;
+  departure_time: string;
+  arrival_time: string;
+  duration: string;
+  price: number;
+  currency: string;
+  stops: number;
+  aircraft: string;
+}
 
 const Index = () => {
   const [fromCity, setFromCity] = useState('');
   const [toCity, setToCity] = useState('');
   const [departDate, setDepartDate] = useState('');
   const [returnDate, setReturnDate] = useState('');
+  const [cities, setCities] = useState<City[]>([]);
+  const [filteredFromCities, setFilteredFromCities] = useState<City[]>([]);
+  const [filteredToCities, setFilteredToCities] = useState<City[]>([]);
+  const [flights, setFlights] = useState<Flight[]>([]);
+  const [loading, setLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedFromCity, setSelectedFromCity] = useState<City | null>(null);
+  const [selectedToCity, setSelectedToCity] = useState<City | null>(null);
+
+  // Fetch cities on component mount
+  useEffect(() => {
+    fetchCities();
+  }, []);
+
+  const fetchCities = async () => {
+    try {
+      setLoading(true);
+      const response = await fetch('https://functions.poehali.dev/6cdc378e-a07f-445d-bf2d-624439860b60?action=cities');
+      const data = await response.json();
+      setCities(data.cities || []);
+      setFilteredFromCities(data.cities || []);
+      setFilteredToCities(data.cities || []);
+    } catch (error) {
+      console.error('Error fetching cities:', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const filterCities = useCallback((query: string, exclude?: string) => {
+    if (!query) return cities;
+    const filtered = cities.filter(city => 
+      (city.name.toLowerCase().includes(query.toLowerCase()) || 
+       city.country.toLowerCase().includes(query.toLowerCase())) &&
+      city.code !== exclude
+    );
+    return filtered.slice(0, 8); // Limit results
+  }, [cities]);
+
+  const handleFromCityChange = (value: string) => {
+    setFromCity(value);
+    setFilteredFromCities(filterCities(value, selectedToCity?.code));
+  };
+
+  const handleToCityChange = (value: string) => {
+    setToCity(value);
+    setFilteredToCities(filterCities(value, selectedFromCity?.code));
+  };
+
+  const handleFromCitySelect = (city: City) => {
+    setSelectedFromCity(city);
+    setFromCity(city.name);
+  };
+
+  const handleToCitySelect = (city: City) => {
+    setSelectedToCity(city);
+    setToCity(city.name);
+  };
+
+  const searchFlights = async () => {
+    if (!selectedFromCity || !selectedToCity || !departDate) {
+      alert('Пожалуйста, заполните все поля поиска');
+      return;
+    }
+
+    try {
+      setSearchLoading(true);
+      const params = new URLSearchParams({
+        action: 'search',
+        origin: selectedFromCity.code,
+        destination: selectedToCity.code,
+        depart_date: departDate
+      });
+      
+      const response = await fetch(`https://functions.poehali.dev/6cdc378e-a07f-445d-bf2d-624439860b60?${params}`);
+      const data = await response.json();
+      setFlights(data.flights || []);
+    } catch (error) {
+      console.error('Error searching flights:', error);
+    } finally {
+      setSearchLoading(false);
+    }
+  };
 
   const popularDestinations = [
     { city: 'Париж', country: 'Франция', price: 'от 25 000 ₽', image: '🇫🇷' },
@@ -66,24 +170,24 @@ const Index = () => {
           <Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-md shadow-2xl animate-scale-in">
             <CardContent className="p-8">
               <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
-                <div className="relative">
-                  <Icon name="MapPin" size={20} className="absolute left-3 top-3 text-gray-400" />
-                  <Input
-                    placeholder="Откуда"
-                    value={fromCity}
-                    onChange={(e) => setFromCity(e.target.value)}
-                    className="pl-10 h-12"
-                  />
-                </div>
-                <div className="relative">
-                  <Icon name="Navigation" size={20} className="absolute left-3 top-3 text-gray-400" />
-                  <Input
-                    placeholder="Куда"
-                    value={toCity}
-                    onChange={(e) => setToCity(e.target.value)}
-                    className="pl-10 h-12"
-                  />
-                </div>
+                <Autocomplete
+                  placeholder="Откуда"
+                  value={fromCity}
+                  onChange={handleFromCityChange}
+                  onSelect={handleFromCitySelect}
+                  options={filteredFromCities}
+                  loading={loading}
+                  icon="MapPin"
+                />
+                <Autocomplete
+                  placeholder="Куда"
+                  value={toCity}
+                  onChange={handleToCityChange}
+                  onSelect={handleToCitySelect}
+                  options={filteredToCities}
+                  loading={loading}
+                  icon="Navigation"
+                />
                 <div className="relative">
                   <Icon name="Calendar" size={20} className="absolute left-3 top-3 text-gray-400" />
                   <Input
@@ -104,14 +208,77 @@ const Index = () => {
                   />
                 </div>
               </div>
-              <Button size="lg" className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white font-semibold">
-                <Icon name="Search" size={20} className="mr-2" />
-                Найти билеты
+              <Button 
+                size="lg" 
+                className="w-full h-12 bg-sky-500 hover:bg-sky-600 text-white font-semibold"
+                onClick={searchFlights}
+                disabled={searchLoading}
+              >
+                <Icon name={searchLoading ? "Loader2" : "Search"} size={20} className={`mr-2 ${searchLoading ? 'animate-spin' : ''}`} />
+                {searchLoading ? 'Поиск...' : 'Найти билеты'}
               </Button>
             </CardContent>
           </Card>
         </div>
       </section>
+
+      {/* Flight Results */}
+      {flights.length > 0 && (
+        <section className="py-16 px-4 bg-white">
+          <div className="container mx-auto">
+            <h2 className="text-3xl font-bold text-center text-gray-900 mb-12">
+              Результаты поиска
+            </h2>
+            <div className="max-w-4xl mx-auto space-y-4">
+              {flights.map((flight, index) => (
+                <Card key={flight.id} className="hover:shadow-lg transition-all duration-300 animate-fade-in">
+                  <CardContent className="p-6">
+                    <div className="flex items-center justify-between">
+                      <div className="flex-1">
+                        <div className="flex items-center space-x-4">
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-gray-900">{flight.departure_time}</div>
+                            <div className="text-sm text-gray-500">{flight.origin}</div>
+                          </div>
+                          <div className="flex-1 text-center">
+                            <div className="flex items-center justify-center space-x-2">
+                              <div className="h-px bg-gray-300 flex-1"></div>
+                              <Icon name="Plane" size={20} className="text-sky-500" />
+                              <div className="h-px bg-gray-300 flex-1"></div>
+                            </div>
+                            <div className="text-sm text-gray-500 mt-1">{flight.duration}</div>
+                            {flight.stops > 0 && (
+                              <div className="text-xs text-orange-600">{flight.stops} пересадка</div>
+                            )}
+                          </div>
+                          <div className="text-center">
+                            <div className="text-2xl font-bold text-gray-900">{flight.arrival_time}</div>
+                            <div className="text-sm text-gray-500">{flight.destination}</div>
+                          </div>
+                        </div>
+                        <div className="mt-4 flex items-center justify-between">
+                          <div>
+                            <div className="font-medium text-gray-900">{flight.airline}</div>
+                            <div className="text-sm text-gray-500">{flight.aircraft}</div>
+                          </div>
+                          <div className="text-right">
+                            <div className="text-3xl font-bold text-sky-600">
+                              {flight.price.toLocaleString()} {flight.currency}
+                            </div>
+                            <Button className="mt-2 bg-sky-500 hover:bg-sky-600">
+                              Выбрать
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Popular Destinations */}
       <section className="py-16 px-4">
