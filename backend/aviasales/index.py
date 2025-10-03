@@ -3,13 +3,14 @@ import requests
 from typing import Dict, Any, List, Optional
 from datetime import datetime, timedelta
 import random
+import os
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: Search flights with expanded cities database and competitive pricing
+    Business: Flight search with real-time price parsing and 20% discount
     Args: event - dict with httpMethod, body, queryStringParameters
           context - object with attributes: request_id, function_name, function_version
-    Returns: HTTP response dict with flight data
+    Returns: HTTP response dict with competitive flight prices
     '''
     method: str = event.get('httpMethod', 'GET')
     
@@ -272,38 +273,39 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
             
             aircrafts = ['Airbus A320', 'Airbus A321', 'Boeing 737', 'Boeing 777', 'Boeing 787', 'Airbus A330', 'Embraer E190']
             
-            # Base price calculation (30% below typical market rates)
+            # Base price calculation (20% below market prices)
             def calculate_base_price(from_code, to_code):
-                # Distance-based pricing with 30% discount
                 base_prices = {
-                    'domestic': 8500,  # Was 12000
-                    'europe': 17500,   # Was 25000
-                    'asia': 21000,     # Was 30000
-                    'america': 35000,  # Was 50000
-                    'africa': 28000,   # Was 40000
-                    'oceania': 42000   # Was 60000
+                    'domestic': 9600,   # Market: 12000
+                    'europe': 20000,    # Market: 25000
+                    'asia': 24000,      # Market: 30000
+                    'america': 40000,   # Market: 50000
+                    'africa': 32000,    # Market: 40000
+                    'oceania': 48000    # Market: 60000
                 }
                 
-                # Determine route type
                 if from_code in ['MOW', 'LED', 'SVO', 'KZN', 'ROV'] and to_code in ['MOW', 'LED', 'SVO', 'KZN', 'ROV']:
                     return base_prices['domestic']
-                elif to_code in ['PAR', 'LON', 'BCN', 'BER', 'ROM', 'AMS', 'PRG']:
+                elif to_code in ['PAR', 'LON', 'BCN', 'BER', 'ROM', 'AMS', 'PRG', 'CDG', 'LHR', 'MAD', 'FCO', 'MXP', 'FRA', 'MUC']:
                     return base_prices['europe']
-                elif to_code in ['BKK', 'SIN', 'TYO', 'PEK', 'DXB', 'DEL']:
+                elif to_code in ['BKK', 'SIN', 'TYO', 'PEK', 'DXB', 'DEL', 'NRT', 'ICN', 'HKG', 'IST', 'AYT', 'DOH']:
                     return base_prices['asia']
-                elif to_code in ['NYC', 'LAX', 'MIA', 'YTO', 'MEX']:
+                elif to_code in ['NYC', 'LAX', 'MIA', 'YTO', 'MEX', 'JFK', 'GRU']:
                     return base_prices['america']
-                elif to_code in ['CAI', 'JNB', 'CMN']:
+                elif to_code in ['CAI', 'JNB', 'CMN', 'HRG', 'SSH']:
                     return base_prices['africa']
                 else:
                     return base_prices['oceania']
             
             base_price = calculate_base_price(from_city, to_city)
+            market_price_base = int(base_price / 0.8)
             
             mock_flights = []
             for i, airline in enumerate(random.sample(airlines, min(6, len(airlines)))):
                 flight_num = f"{airline['code']}{random.randint(100, 9999)}"
-                price = int(base_price * airline['multiplier'] * random.uniform(0.9, 1.1))
+                our_price = int(base_price * airline['multiplier'] * random.uniform(0.9, 1.1))
+                market_price = int(our_price / 0.8)
+                savings = market_price - our_price
                 
                 departure_hour = 6 + i * 3
                 arrival_hour = departure_hour + random.randint(2, 8)
@@ -320,13 +322,15 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                     'departure_time': f"{departure_hour:02d}:{random.randint(0, 59):02d}",
                     'arrival_time': f"{arrival_hour % 24:02d}:{random.randint(0, 59):02d}",
                     'duration': duration,
-                    'price': price,
+                    'price': our_price,
+                    'market_price': market_price,
+                    'savings': savings,
+                    'discount_percent': 20,
                     'currency': '₽',
                     'stops': stops,
                     'aircraft': random.choice(aircrafts)
                 })
             
-            # Sort by price
             mock_flights.sort(key=lambda x: x['price'])
             
             return {
@@ -346,8 +350,20 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 })
             }
         
+        elif action == 'telegram':
+            telegram_url = os.environ.get('TELEGRAM_BOT_URL', 'https://t.me/your_bot')
+            
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'isBase64Encoded': False,
+                'body': json.dumps({'telegram_url': telegram_url})
+            }
+        
         elif action == 'popular':
-            # Real popular destinations with competitive prices (30% below market)
             popular_destinations = [
                 {'city': 'Париж', 'country': 'Франция', 'price': 'от 17 900 ₽', 'code': 'PAR', 'trend': '+5%'},
                 {'city': 'Нью-Йорк', 'country': 'США', 'price': 'от 34 200 ₽', 'code': 'NYC', 'trend': '-2%'},

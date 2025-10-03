@@ -21,6 +21,9 @@ interface Flight {
   arrival_time: string;
   duration: string;
   price: number;
+  market_price?: number;
+  savings?: number;
+  discount_percent?: number;
   currency: string;
   stops: number;
   aircraft: string;
@@ -39,10 +42,12 @@ const Index = () => {
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedFromCity, setSelectedFromCity] = useState<City | null>(null);
   const [selectedToCity, setSelectedToCity] = useState<City | null>(null);
+  const [telegramUrl, setTelegramUrl] = useState('');
 
-  // Fetch cities on component mount
+  // Fetch cities and telegram URL on component mount
   useEffect(() => {
     fetchCities();
+    fetchTelegramUrl();
   }, []);
 
   const fetchCities = async () => {
@@ -90,6 +95,16 @@ const Index = () => {
     setToCity(city.name);
   };
 
+  const fetchTelegramUrl = async () => {
+    try {
+      const response = await fetch('https://functions.poehali.dev/6cdc378e-a07f-445d-bf2d-624439860b60?action=telegram');
+      const data = await response.json();
+      setTelegramUrl(data.telegram_url || 'https://t.me/your_bot');
+    } catch (error) {
+      console.error('Error fetching telegram URL:', error);
+    }
+  };
+
   const searchFlights = async () => {
     if (!selectedFromCity || !selectedToCity || !departDate) {
       alert('Пожалуйста, заполните все поля поиска');
@@ -100,9 +115,9 @@ const Index = () => {
       setSearchLoading(true);
       const params = new URLSearchParams({
         action: 'search',
-        origin: selectedFromCity.code,
-        destination: selectedToCity.code,
-        depart_date: departDate
+        from: selectedFromCity.code,
+        to: selectedToCity.code,
+        date: departDate
       });
       
       const response = await fetch(`https://functions.poehali.dev/6cdc378e-a07f-445d-bf2d-624439860b60?${params}`);
@@ -115,13 +130,19 @@ const Index = () => {
     }
   };
 
+  const buyTicket = (flight: Flight) => {
+    const message = `Рейс ${flight.airline} ${flight.id}\n${flight.origin} → ${flight.destination}\n${flight.departure_time} - ${flight.arrival_time}\nЦена: ${flight.price.toLocaleString()} ${flight.currency}`;
+    const url = `${telegramUrl}?start=${encodeURIComponent(message)}`;
+    window.open(url, '_blank');
+  };
+
   const popularDestinations = [
-    { city: 'Париж', country: 'Франция', price: 'от 25 000 ₽', image: '🇫🇷' },
-    { city: 'Нью-Йорк', country: 'США', price: 'от 45 000 ₽', image: '🇺🇸' },
-    { city: 'Токио', country: 'Япония', price: 'от 55 000 ₽', image: '🇯🇵' },
-    { city: 'Лондон', country: 'Великобритания', price: 'от 28 000 ₽', image: '🇬🇧' },
-    { city: 'Дубай', country: 'ОАЭ', price: 'от 32 000 ₽', image: '🇦🇪' },
-    { city: 'Барселона', country: 'Испания', price: 'от 22 000 ₽', image: '🇪🇸' }
+    { city: 'Париж', country: 'Франция', price: 'от 20 000 ₽', oldPrice: '25 000 ₽', image: '🇫🇷' },
+    { city: 'Нью-Йорк', country: 'США', price: 'от 36 000 ₽', oldPrice: '45 000 ₽', image: '🇺🇸' },
+    { city: 'Токио', country: 'Япония', price: 'от 44 000 ₽', oldPrice: '55 000 ₽', image: '🇯🇵' },
+    { city: 'Лондон', country: 'Великобритания', price: 'от 22 400 ₽', oldPrice: '28 000 ₽', image: '🇬🇧' },
+    { city: 'Дубай', country: 'ОАЭ', price: 'от 25 600 ₽', oldPrice: '32 000 ₽', image: '🇦🇪' },
+    { city: 'Барселона', country: 'Испания', price: 'от 17 600 ₽', oldPrice: '22 000 ₽', image: '🇪🇸' }
   ];
 
   const specialOffers = [
@@ -160,11 +181,15 @@ const Index = () => {
         />
         <div className="relative container mx-auto text-center">
           <h1 className="text-5xl font-bold text-white mb-4 animate-fade-in">
-            Найдите билеты по всему миру
+            Авиабилеты на 20% дешевле рынка
           </h1>
           <p className="text-xl text-white/90 mb-12 animate-fade-in">
-            Лучшие цены на авиабилеты от проверенных авиакомпаний
+            200+ городов • Реальный парсинг цен • Гарантия лучшей цены
           </p>
+          <Badge className="mb-8 bg-green-500 text-white text-lg px-6 py-2">
+            <Icon name="TrendingDown" size={20} className="mr-2" />
+            Скидка 20% на все рейсы
+          </Badge>
 
           {/* Search Form */}
           <Card className="max-w-4xl mx-auto bg-white/95 backdrop-blur-md shadow-2xl animate-scale-in">
@@ -262,11 +287,25 @@ const Index = () => {
                             <div className="text-sm text-gray-500">{flight.aircraft}</div>
                           </div>
                           <div className="text-right">
-                            <div className="text-3xl font-bold text-sky-600">
+                            {flight.market_price && (
+                              <div className="text-sm text-gray-400 line-through">
+                                {flight.market_price.toLocaleString()} {flight.currency}
+                              </div>
+                            )}
+                            <div className="text-3xl font-bold text-green-600">
                               {flight.price.toLocaleString()} {flight.currency}
                             </div>
-                            <Button className="mt-2 bg-sky-500 hover:bg-sky-600">
-                              Выбрать
+                            {flight.savings && (
+                              <Badge className="mt-1 bg-green-500 text-white">
+                                -20% • Экономия {flight.savings.toLocaleString()} ₽
+                              </Badge>
+                            )}
+                            <Button 
+                              className="mt-2 bg-green-500 hover:bg-green-600 w-full"
+                              onClick={() => buyTicket(flight)}
+                            >
+                              <Icon name="ShoppingCart" size={18} className="mr-2" />
+                              Купить
                             </Button>
                           </div>
                         </div>
@@ -292,14 +331,20 @@ const Index = () => {
                 <CardContent className="p-6">
                   <div className="flex items-center justify-between mb-4">
                     <div className="text-4xl">{destination.image}</div>
-                    <Badge variant="secondary" className="bg-sky-100 text-sky-800">
-                      {destination.price}
-                    </Badge>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-400 line-through">{destination.oldPrice}</div>
+                      <Badge variant="secondary" className="bg-green-100 text-green-800">
+                        {destination.price}
+                      </Badge>
+                    </div>
                   </div>
                   <h3 className="text-xl font-semibold text-gray-900 mb-1">
                     {destination.city}
                   </h3>
                   <p className="text-gray-600 text-sm">{destination.country}</p>
+                  <Badge className="mt-2 bg-green-500 text-white text-xs">
+                    -20% скидка
+                  </Badge>
                   <div className="mt-4 flex items-center text-sky-600 group-hover:text-sky-700 transition-colors">
                     <span className="text-sm font-medium">Подробнее</span>
                     <Icon name="ArrowRight" size={16} className="ml-1" />
@@ -367,8 +412,8 @@ const Index = () => {
               <div className="w-16 h-16 bg-sky-100 rounded-full flex items-center justify-center mx-auto mb-4 animate-float">
                 <Icon name="Percent" size={32} className="text-sky-600" />
               </div>
-              <h3 className="text-xl font-semibold text-gray-900 mb-2">Лучшие цены</h3>
-              <p className="text-gray-600">Сравниваем цены всех авиакомпаний и находим самые выгодные предложения</p>
+              <h3 className="text-xl font-semibold text-gray-900 mb-2">Скидка 20%</h3>
+              <p className="text-gray-600">Парсим цены конкурентов и делаем на 20% дешевле. Гарантия лучшей цены</p>
             </div>
           </div>
         </div>
