@@ -7,10 +7,10 @@ import os
 
 def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
     '''
-    Business: Flight search with real-time price parsing and 20% discount
+    Business: Travel platform with flights (20% discount) and hotels (25% discount)
     Args: event - dict with httpMethod, body, queryStringParameters
           context - object with attributes: request_id, function_name, function_version
-    Returns: HTTP response dict with competitive flight prices
+    Returns: HTTP response dict with competitive prices for flights and hotels
     '''
     method: str = event.get('httpMethod', 'GET')
     
@@ -363,6 +363,49 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
                 'body': json.dumps({'telegram_url': telegram_url})
             }
         
+        elif action == 'hotels':
+            city = params.get('city', 'Москва')
+            checkin = params.get('checkin', '2024-12-15')
+            checkout = params.get('checkout', '2024-12-18')
+            guests = int(params.get('guests', '2'))
+            
+            hotels = generate_hotels(city, checkin, checkout, guests)
+            
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'isBase64Encoded': False,
+                'body': json.dumps({
+                    'hotels': hotels,
+                    'search_params': {
+                        'city': city,
+                        'checkin': checkin,
+                        'checkout': checkout,
+                        'guests': guests
+                    }
+                })
+            }
+        
+        elif action == 'hotel_cities':
+            cities = get_hotel_cities()
+            
+            query = params.get('q', '').lower()
+            if query:
+                cities = [city for city in cities if query in city.lower()]
+            
+            return {
+                'statusCode': 200,
+                'headers': {
+                    'Content-Type': 'application/json',
+                    'Access-Control-Allow-Origin': '*'
+                },
+                'isBase64Encoded': False,
+                'body': json.dumps({'cities': cities[:50]})
+            }
+        
         elif action == 'popular':
             popular_destinations = [
                 {'city': 'Париж', 'country': 'Франция', 'price': 'от 17 900 ₽', 'code': 'PAR', 'trend': '+5%'},
@@ -388,3 +431,120 @@ def handler(event: Dict[str, Any], context: Any) -> Dict[str, Any]:
         'headers': {'Access-Control-Allow-Origin': '*'},
         'body': json.dumps({'error': 'Method not allowed'})
     }
+
+def generate_hotels(city: str, checkin: str, checkout: str, guests: int) -> List[Dict[str, Any]]:
+    hotel_chains = [
+        {'name': 'Marriott', 'multiplier': 1.3},
+        {'name': 'Hilton', 'multiplier': 1.25},
+        {'name': 'Hyatt', 'multiplier': 1.2},
+        {'name': 'Radisson', 'multiplier': 1.0},
+        {'name': 'Novotel', 'multiplier': 0.95},
+        {'name': 'ibis', 'multiplier': 0.7},
+        {'name': 'Holiday Inn', 'multiplier': 0.85},
+        {'name': 'Best Western', 'multiplier': 0.8},
+        {'name': 'DoubleTree', 'multiplier': 1.1},
+        {'name': 'Crowne Plaza', 'multiplier': 1.15}
+    ]
+    
+    city_base_prices = {
+        'москва': 8000,
+        'санкт-петербург': 6000,
+        'сочи': 7000,
+        'казань': 4500,
+        'екатеринбург': 4000,
+        'париж': 12000,
+        'лондон': 15000,
+        'нью-йорк': 18000,
+        'дубай': 14000,
+        'токио': 13000,
+        'барселона': 9000,
+        'рим': 10000,
+        'стамбул': 5000,
+        'бангкок': 4000,
+        'сингапур': 11000,
+        'бали': 6000,
+        'пхукет': 5500,
+        'майами': 16000,
+        'лас-вегас': 12000
+    }
+    
+    city_lower = city.lower()
+    base_price = city_base_prices.get(city_lower, 6000)
+    
+    hotels = []
+    num_hotels = min(random.randint(12, 20), 20)
+    
+    for i in range(num_hotels):
+        chain = random.choice(hotel_chains)
+        star_rating = random.randint(3, 5)
+        
+        night_price = int(base_price * chain['multiplier'] * random.uniform(0.9, 1.1))
+        market_night_price = int(night_price / 0.75)
+        
+        try:
+            from datetime import datetime as dt
+            checkin_date = dt.strptime(checkin, '%Y-%m-%d')
+            checkout_date = dt.strptime(checkout, '%Y-%m-%d')
+            nights = max((checkout_date - checkin_date).days, 1)
+        except:
+            nights = 3
+        
+        total_price = night_price * nights
+        market_total_price = market_night_price * nights
+        savings = market_total_price - total_price
+        
+        hotel_types = ['Hotel', 'Resort', 'Inn', 'Suites', 'Plaza']
+        hotel_name = f"{chain['name']} {random.choice(hotel_types)} {city}"
+        
+        amenities = random.sample([
+            'Wi-Fi бесплатно',
+            'Бассейн',
+            'Спа-центр',
+            'Фитнес-зал',
+            'Ресторан',
+            'Парковка',
+            'Трансфер',
+            'Кондиционер',
+            'Мини-бар',
+            'Сейф'
+        ], k=random.randint(4, 7))
+        
+        hotels.append({
+            'id': f"HTL{random.randint(10000, 99999)}",
+            'name': hotel_name,
+            'chain': chain['name'],
+            'stars': star_rating,
+            'rating': round(random.uniform(7.5, 9.8), 1),
+            'reviews_count': random.randint(150, 3500),
+            'price_per_night': night_price,
+            'market_price_per_night': market_night_price,
+            'total_price': total_price,
+            'market_total_price': market_total_price,
+            'savings': savings,
+            'discount_percent': 25,
+            'currency': '₽',
+            'nights': nights,
+            'address': f"{random.choice(['Центральный район', 'Исторический центр', 'Деловой район', 'Прибрежная зона'])}, {city}",
+            'distance_to_center': round(random.uniform(0.3, 5.0), 1),
+            'amenities': amenities,
+            'room_type': random.choice(['Стандартный номер', 'Делюкс', 'Люкс', 'Семейный номер', 'Апартаменты']),
+            'cancellation': random.choice(['Бесплатная отмена', 'Отмена за 48 часов', 'Без возврата']),
+            'breakfast_included': random.choice([True, False]),
+            'image': f"https://images.unsplash.com/photo-{random.randint(1500000000000, 1600000000000)}"
+        })
+    
+    hotels.sort(key=lambda x: x['total_price'])
+    return hotels
+
+def get_hotel_cities() -> List[str]:
+    return [
+        'Москва', 'Санкт-Петербург', 'Сочи', 'Казань', 'Екатеринбург',
+        'Новосибирск', 'Калининград', 'Владивосток', 'Красноярск', 'Иркутск',
+        'Париж', 'Лондон', 'Барселона', 'Рим', 'Милан', 'Венеция',
+        'Амстердам', 'Берлин', 'Мюнхен', 'Прага', 'Вена', 'Будапешт',
+        'Стамбул', 'Анталья', 'Дубай', 'Абу-Даби', 'Доха',
+        'Нью-Йорк', 'Лос-Анджелес', 'Майами', 'Лас-Вегас', 'Сан-Франциско',
+        'Бангкок', 'Пхукет', 'Сингапур', 'Токио', 'Сеул', 'Гонконг',
+        'Дели', 'Мумбаи', 'Гоа', 'Бали', 'Джакарта', 'Ханой', 'Хошимин',
+        'Мальдивы', 'Сейшелы', 'Маврикий', 'Занзибар', 'Кейптаун'
+    ]

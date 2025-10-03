@@ -29,7 +29,31 @@ interface Flight {
   aircraft: string;
 }
 
+interface Hotel {
+  id: string;
+  name: string;
+  chain: string;
+  stars: number;
+  rating: number;
+  reviews_count: number;
+  price_per_night: number;
+  market_price_per_night: number;
+  total_price: number;
+  market_total_price: number;
+  savings: number;
+  discount_percent: number;
+  currency: string;
+  nights: number;
+  address: string;
+  distance_to_center: number;
+  amenities: string[];
+  room_type: string;
+  cancellation: string;
+  breakfast_included: boolean;
+}
+
 const Index = () => {
+  const [activeTab, setActiveTab] = useState<'flights' | 'hotels'>('flights');
   const [fromCity, setFromCity] = useState('');
   const [toCity, setToCity] = useState('');
   const [departDate, setDepartDate] = useState('');
@@ -38,6 +62,12 @@ const Index = () => {
   const [filteredFromCities, setFilteredFromCities] = useState<City[]>([]);
   const [filteredToCities, setFilteredToCities] = useState<City[]>([]);
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [hotels, setHotels] = useState<Hotel[]>([]);
+  const [hotelCity, setHotelCity] = useState('');
+  const [hotelCheckin, setHotelCheckin] = useState('');
+  const [hotelCheckout, setHotelCheckout] = useState('');
+  const [hotelGuests, setHotelGuests] = useState('2');
+  const [hotelCities, setHotelCities] = useState<string[]>([]);
   const [loading, setLoading] = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
   const [selectedFromCity, setSelectedFromCity] = useState<City | null>(null);
